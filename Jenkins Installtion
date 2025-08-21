@@ -1,0 +1,6 @@
+Jenkins Installation
+
+sudo su
+wget https://raw.githubusercontent.com/akshu20791/Deployment-script/refs/heads/main/jenkins.sh
+chmod jenkins.sh
+./jenkins.sh
