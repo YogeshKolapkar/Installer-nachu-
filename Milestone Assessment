@@ -1,0 +1,264 @@
+First Step :-
+
+sudo su 
+apt update
+git clone https://github.com/akshu20791/addressbook-cicd-project
+cd addressbook-cicd-project
+
+Second Step :-
+
+# Create a Github Repository and generate PAT
+
+git remote remove origin
+git remote add origin git@github.com:<your-user>/<your-repo>.git
+git push -u origin master
+
+cd ..
+
+Third Step :-
+
+Terraform Script to create 2 Instance
+
+# Terraform Install
+wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update && sudo apt install terraform
+
+# Terraform Resource 
+
+provider "aws" {
+  region     = "us-west-2"
+  access_key = "my-access-key"
+  secret_key = "my-secret-key"
+}
+
+# Create a 2 Instance
+
+resource "aws_instance" "example" {
+  ami           = ""
+  instance_type = "t3.micro"
+  count = 2
+  security_groups = [""]
+
+  tags = {
+    Name = "HelloWorld"
+  }
+}
+
+Terraform init
+Terraform plan
+Terraform apply
+
+Fourth Step:-
+
+# Install Ansible in Master
+
+apt update -y
+ apt-get install -y software-properties-common
+ apt-add-repository ppa:ansible/ansible
+  apt-get update
+  apt-get install -y ansible
+
+
+# Perform the below code in master 
+vi /etc/ansible/hosts
+
+# Create a user in Ansible server (master machine) and the nodes
+adduser devops
+
+# We will now configure sshd configuration in master and node machines 
+vi /etc/ssh/sshd_config
+
+# (with latest ubuntu these steps need to be added up in master and nodes) 
+vi /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+
+service ssh restart # in both master and nodes
+
+visudo  # in both master and nodes
+   devops ALL=(ALL:ALL) NOPASSWD:ALL
+   jenkins ALL=(ALL:ALL) NOPASSWD:ALL
+
+# In master perform this
+su - devops
+ssh-keygen
+ls -a
+cd .ssh
+ssh-copy-id devops@privateipofnode1
+
+
+Fifth Step :-
+
+# Install jenkins on the master node
+
+# first way :-
+wget https://raw.githubusercontent.com/akshu20791/Deployment-script/refs/heads/main/jenkins.sh
+chmod 700 jenkins.sh
+./jenkins.sh
+
+# Second way uisng ansible-playbook
+vi jenkins.yml
+
+Now put this script in it
+---
+- hosts: [ansiblegroup]
+  become: true
+
+  tasks:
+    - name: Ensure wget is installed
+      ansible.builtin.package:
+        name: wget
+        state: present
+
+    - name: Download Jenkins installation script
+      ansible.builtin.get_url:
+        url: "https://raw.githubusercontent.com/akshu20791/Deployment-script/refs/heads/main/jenkins.sh"
+        dest: "/home/devops/jenkins.sh"
+        mode: '0755'
+
+    - name: Run Jenkins installation script
+      ansible.builtin.command: "bash /home/devops/jenkins.sh"
+      args:
+        chdir: /home/devops
+
+
+Sixth Step :-
+
+# Install Tomcat using Ansible-Playbook
+
+vi tomcat.yml
+
+---
+- name: install tomcat at node
+  hosts: ansiblegroup
+  become: yes
+
+  tasks:
+    - name: update package
+      apt:
+        update_cache: true
+
+    - name: get tomact from url
+      ansible.builtin.get_url:
+        url: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.108/bin/apache-tomcat-9.0.108.zip
+        dest: /home/ubuntu
+
+    - name: get intall unzip packeg
+      apt:
+        name: unzip
+        state: present
+
+    - name: unzip package
+      ansible.builtin.unarchive:
+        src: /home/ubuntu/apache-tomcat-9.0.108.zip
+        dest: /home/ubuntu/
+        remote_src: yes
+
+ls 
+cd config 
+ls 
+vi server.xml # Change the port number to 9090 from 8080
+cd ..
+ls
+cd bin
+chmod 700 *.sh
+./startup.sh
+
+
+# Pipeline Script for Jenkins
+
+pipeline{
+    agent any
+    stages{
+        stage("first stage: here we checkout the code from github"){
+            steps{
+                git 'https://github.com/akshu20791/addressbook-cicd-project'
+                echo "cloning the code in jenkins workspace"
+            }
+        }
+        stage("compile the code by akshat"){
+            steps{
+                sh 'mvn compile'
+                echo "compiling the project"
+            }
+        }
+        stage("runnng the test case"){
+            steps{
+                sh 'mvn test'
+            }
+        }
+        stage("packaging the project"){
+            steps{
+                sh 'mvn package'
+            }
+        }
+        stage("depoy the project"){
+            steps{
+                sh 'sudo cp /var/lib/jenkins/workspace/akash/target/addressbook.war /home/ubuntu/apache-tomcat-9.0.108/webapps'
+            }
+        }
+    }
+}
+
+
+Seventh Step :- Configure a GitHub Webhook to trigger the Jenkins pipeline automatically on code push.
+
+1. Install Required Plugins
+Log in to Jenkins Dashboard.
+Go to Manage Jenkins → Plugins → Available plugins.
+Install:
+GitHub Integration Plugin (or GitHub plugin).
+Pipeline: GitHub (if using pipelines).
+Git plugin (for source checkout).
+Restart Jenkins after installation.
+
+2. Configure GitHub Server in Jenkins
+Go to Manage Jenkins → Configure System.
+Scroll down to GitHub section.
+Add GitHub server details:
+If using Personal Access Token: click Add → Jenkins → Secret Text → paste token from GitHub.
+Test connection → should show green ✅.
+
+3. Create/Update Jenkins Pipeline Job
+Create a Pipeline Job (or freestyle if you prefer).
+Under Source Code Management → Git:
+Add your GitHub repository URL.
+Provide credentials (SSH key or HTTPS token).
+Under Build Triggers:
+Tick GitHub hook trigger for GITScm polling.
+
+🔧 Steps on GitHub Side
+4. Create Webhook in GitHub Repo
+Go to your GitHub repository → Settings → Webhooks → Add webhook.
+In Payload URL:
+http://<your-jenkins-public-ip>:8080/github-webhook/
+Example:
+http://13.127.115.194:8080/github-webhook/
+(Make sure port 8080 is open in security groups if Jenkins is on AWS EC2).
+Content type:
+application/json
+Select Just the push event.
+Save Webhook.
+
+5. Test the Setup
+Push some code to your GitHub repo (git push origin main).
+Go to Jenkins → Job → Build History → should trigger automatically.
+In GitHub repo → Webhooks → you can check Recent Deliveries to see if GitHub sent the request successfully.
+✅ That’s it! Now every git push to GitHub will trigger Jenkins pipeline automatically.
+
+Do you want me to also give you the Terraform security group rules you’ll need for Jenkins so GitHub can reach the webhook (port 8080)?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
