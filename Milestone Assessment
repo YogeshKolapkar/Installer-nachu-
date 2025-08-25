@@ -85,6 +85,10 @@ ls -a
 cd .ssh
 ssh-copy-id devops@privateipofnode1
 
+sudo apt update -y
+sudo apt install openjdk-17-jdk -y
+sudo apt update -y
+sudo apt install maven -y
 
 Fifth Step :-
 
