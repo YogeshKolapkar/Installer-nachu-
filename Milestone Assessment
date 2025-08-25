@@ -120,8 +120,10 @@ Now put this script in it
       args:
         chdir: /home/devops
 
+Then go to node and use cat command for the password
 
-Sixth Step :-
+
+Sixth Step :- Peroform this code on master
 
 # Install Tomcat using Ansible-Playbook
 
@@ -153,6 +155,8 @@ vi tomcat.yml
         dest: /home/ubuntu/
         remote_src: yes
 
+
+# Perform below code in node
 ls 
 cd config 
 ls 
@@ -171,7 +175,7 @@ pipeline{
     stages{
         stage("first stage: here we checkout the code from github"){
             steps{
-                git 'https://github.com/akshu20791/addressbook-cicd-project'
+                git 'https://github.com/akshu20791/addressbook-cicd-project'  # 1 change add your repo
                 echo "cloning the code in jenkins workspace"
             }
         }
@@ -193,59 +197,16 @@ pipeline{
         }
         stage("depoy the project"){
             steps{
-                sh 'sudo cp /var/lib/jenkins/workspace/akash/target/addressbook.war /home/ubuntu/apache-tomcat-9.0.108/webapps'
+                sh 'sudo cp /var/lib/jenkins/workspace/akash/target/addressbook.war /home/ubuntu/apache-tomcat-9.0.108/webapps' # 2nd change:- Change the name of pipeline with your pipeline name
             }
         }
     }
 }
 
 
-Seventh Step :- Configure a GitHub Webhook to trigger the Jenkins pipeline automatically on code push.
+For 7th setp use Jenkins lab pdf from page no 21 - 24
 
-1. Install Required Plugins
-Log in to Jenkins Dashboard.
-Go to Manage Jenkins → Plugins → Available plugins.
-Install:
-GitHub Integration Plugin (or GitHub plugin).
-Pipeline: GitHub (if using pipelines).
-Git plugin (for source checkout).
-Restart Jenkins after installation.
-
-2. Configure GitHub Server in Jenkins
-Go to Manage Jenkins → Configure System.
-Scroll down to GitHub section.
-Add GitHub server details:
-If using Personal Access Token: click Add → Jenkins → Secret Text → paste token from GitHub.
-Test connection → should show green ✅.
-
-3. Create/Update Jenkins Pipeline Job
-Create a Pipeline Job (or freestyle if you prefer).
-Under Source Code Management → Git:
-Add your GitHub repository URL.
-Provide credentials (SSH key or HTTPS token).
-Under Build Triggers:
-Tick GitHub hook trigger for GITScm polling.
-
-🔧 Steps on GitHub Side
-4. Create Webhook in GitHub Repo
-Go to your GitHub repository → Settings → Webhooks → Add webhook.
-In Payload URL:
-http://<your-jenkins-public-ip>:8080/github-webhook/
-Example:
-http://13.127.115.194:8080/github-webhook/
-(Make sure port 8080 is open in security groups if Jenkins is on AWS EC2).
-Content type:
-application/json
-Select Just the push event.
-Save Webhook.
-
-5. Test the Setup
-Push some code to your GitHub repo (git push origin main).
-Go to Jenkins → Job → Build History → should trigger automatically.
-In GitHub repo → Webhooks → you can check Recent Deliveries to see if GitHub sent the request successfully.
-✅ That’s it! Now every git push to GitHub will trigger Jenkins pipeline automatically.
-
-Do you want me to also give you the Terraform security group rules you’ll need for Jenkins so GitHub can reach the webhook (port 8080)?
+Step no 8 :- Take Screenshot of addressbook project
 
 
 
